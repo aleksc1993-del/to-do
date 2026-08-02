@@ -14,6 +14,9 @@ export type {
   IsoDate,
   Money,
   OperationId,
+  Operation,
+  OperationType,
   OperationTotals,
   Period,
 } from "./model/types";
+export { mockCategories, mockOperations } from "./model/mocks";

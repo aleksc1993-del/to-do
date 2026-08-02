@@ -16,6 +16,8 @@ export type IsoDate = Brand<string, "IsoDate">;
 
 export type CategoryKind = "income" | "expense";
 
+export type OperationType = CategoryKind;
+
 export interface Category {
   readonly id: CategoryId;
   readonly name: string;
@@ -23,6 +25,16 @@ export interface Category {
   readonly color?: string;
   readonly icon?: string;
   readonly isArchived: boolean;
+}
+
+/** Финансовая операция, используемая в списках и расчётах приложения. */
+export interface Operation {
+  readonly id: OperationId;
+  readonly type: OperationType;
+  readonly amount: Money;
+  readonly category: CategoryId;
+  readonly date: IsoDate;
+  readonly comment: string;
 }
 
 export interface Income {
