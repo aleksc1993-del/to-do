@@ -18,8 +18,9 @@ export type {
   OperationType,
   OperationTotals,
   Period,
+  TrendPoint,
 } from "./model/types";
 export { mockCategories, mockOperations } from "./model/mocks";
 export { emptyOperationFilters, filterOperations } from "./model/filters";
 export type { OperationFilters } from "./model/filters";
-export { calculateMonthlyStatistics } from "./model/statistics";
+export { calculateMonthlyStatistics, calculateTrend } from "./model/statistics";

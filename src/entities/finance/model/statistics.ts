@@ -1,4 +1,4 @@
-import type { Category, CurrencyCode, FinancialStatistics, Money, Operation, Period } from "./types";
+import type { Category, CurrencyCode, FinancialStatistics, Money, Operation, Period, TrendPoint } from "./types";
 
 const toMoney = (value: number): Money => value as Money;
 
@@ -31,4 +31,22 @@ export function calculateMonthlyStatistics(
     byCategory: filteredByCategory,
     operationCount: monthOperations.length,
   };
+}
+
+export function calculateTrend(operations: readonly Operation[], month: string, mode: "day" | "month"): readonly TrendPoint[] {
+  const year = Number(month.slice(0, 4));
+  const monthNumber = Number(month.slice(5, 7));
+  const labels = mode === "day"
+    ? Array.from({ length: new Date(year, monthNumber, 0).getDate() }, (_, index) => String(index + 1).padStart(2, "0"))
+    : Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, "0"));
+  return labels.map((label) => {
+    const matches = operations.filter((operation) => mode === "day"
+      ? operation.date === `${month}-${label}`
+      : operation.date.startsWith(`${year}-${label}`));
+    return {
+      label,
+      income: toMoney(matches.filter((operation) => operation.type === "income").reduce((sum, operation) => sum + operation.amount, 0)),
+      expense: toMoney(matches.filter((operation) => operation.type === "expense").reduce((sum, operation) => sum + operation.amount, 0)),
+    };
+  });
 }

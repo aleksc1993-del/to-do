@@ -89,3 +89,9 @@ export interface FinancialStatistics {
   readonly byCategory: readonly CategoryStatistic[];
   readonly operationCount: number;
 }
+
+export interface TrendPoint {
+  readonly label: string;
+  readonly income: Money;
+  readonly expense: Money;
+}

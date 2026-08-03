@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { calculateMonthlyStatistics, mockCategories, mockOperations, type CategoryId, type Money, type Operation } from "../entities/finance";
+import { calculateMonthlyStatistics, calculateTrend, mockCategories, mockOperations, type CategoryId, type Money, type Operation } from "../entities/finance";
 import { createLocalStorageAdapter } from "../shared";
 import "./statistics.css";
 
@@ -11,13 +11,13 @@ const formatMoney = (amount: number) => moneyFormatter.format(amount / 100);
 export function App() {
   const [operations, setOperations] = useState<Operation[]>(() => storage.load() ?? [...mockOperations]);
   const [month, setMonth] = useState("2026-08");
+  const [trendMode, setTrendMode] = useState<"day" | "month">("day");
   useEffect(() => { storage.save(operations); }, [operations]);
 
   const stats = useMemo(() => calculateMonthlyStatistics(operations, month, "RUB", mockCategories), [operations, month]);
   const categories = useMemo(() => new Map(mockCategories.map((category) => [category.id, category])), []);
-  const monthOperations = operations.filter((operation) => operation.date.startsWith(month));
-  const dailyExpenses = Array.from({ length: 7 }, (_, index) => monthOperations.filter((operation) => operation.type === "expense" && Number(operation.date.slice(-2)) === index + 1).reduce((sum, operation) => sum + operation.amount, 0));
-  const maxDailyExpense = Math.max(...dailyExpenses, 1);
+  const trend = useMemo(() => calculateTrend(operations, month, trendMode), [operations, month, trendMode]);
+  const maxTrendValue = Math.max(...trend.flatMap((point) => [Number(point.income), Number(point.expense)]), 1);
   const selectedMonth = monthFormatter.format(new Date(`${month}-01T00:00:00`));
 
   function addExpense(event: FormEvent<HTMLFormElement>) {
@@ -48,7 +48,7 @@ export function App() {
         <article className="summary-card"><p>Баланс</p><strong className={Number(stats.totals.balance) >= 0 ? "positive-value" : "negative-value"}>{formatMoney(Number(stats.totals.balance))}</strong><span className="muted">Доходы − расходы</span></article>
         <article className="summary-card"><p>Операции</p><strong>{stats.operationCount}</strong><span className="muted">за выбранный месяц</span></article>
       </div>
-      <article className="card chart-panel"><div className="card-title"><div><p className="muted">Динамика расходов</p><h2>{selectedMonth}</h2></div><span className="chart-total">{formatMoney(Number(stats.totals.expense))}</span></div><div className="bar-chart" aria-label="Расходы по дням">{dailyExpenses.map((value, index) => <div className="bar-column" key={`${month}-${index + 1}`}><span>{value > 0 ? formatMoney(value) : ""}</span><i style={{ height: `${Math.max(value / maxDailyExpense * 100, value ? 8 : 2)}%` }} /><small>{index + 1} авг</small></div>)}</div></article>
+      <article className="card chart-panel"><div className="card-title"><div><p className="muted">Динамика доходов и расходов</p><h2>{selectedMonth}</h2></div><div className="chart-controls"><button className={trendMode === "day" ? "selected" : ""} type="button" onClick={() => setTrendMode("day")}>Дни</button><button className={trendMode === "month" ? "selected" : ""} type="button" onClick={() => setTrendMode("month")}>Месяцы</button></div></div><div className="chart-legend"><span><i className="legend-income" />Доходы</span><span><i className="legend-expense" />Расходы</span></div><div className="bar-chart" aria-label="Динамика доходов и расходов">{trend.map((point) => <div className="bar-column" key={`${trendMode}-${point.label}`}><span>{Number(point.income) || Number(point.expense) ? formatMoney(Math.max(Number(point.income), Number(point.expense))) : ""}</span><div className="bar-pair"><i className="income-bar" style={{ height: `${Number(point.income) / maxTrendValue * 100}%` }} /><i className="expense-bar" style={{ height: `${Number(point.expense) / maxTrendValue * 100}%` }} /></div><small>{trendMode === "day" ? point.label : `${point.label} мес.`}</small></div>)}</div></article>
       <article className="card category-panel"><div className="card-title"><div><p className="muted">Структура расходов</p><h2>По категориям</h2></div><span className="muted">{stats.byCategory.length} категорий</span></div><div className="category-list">{stats.byCategory.length === 0 ? <p className="muted">Нет расходов за этот месяц.</p> : stats.byCategory.map((item) => <div className="category-row" key={item.categoryId}><span className="category-dot" style={{ background: categories.get(item.categoryId)?.color }} /><div><strong>{categories.get(item.categoryId)?.name ?? "Без категории"}</strong><div className="category-track"><i style={{ width: `${item.share * 100}%`, background: categories.get(item.categoryId)?.color }} /></div></div><b>{formatMoney(Number(item.amount))}</b><small>{Math.round(item.share * 100)}%</small></div>)}</div></article>
       <article className="card quick-add"><h2>Добавить расход</h2><form onSubmit={addExpense}><input name="amount" type="number" min="0.01" step="0.01" placeholder="Сумма в ₽" required /><button type="submit">Добавить</button></form></article>
     </section>
