@@ -15,10 +15,11 @@
     "eslint": "latest",
     "eslint-plugin-react-hooks": "latest",
     "eslint-plugin-react-refresh": "latest",
-    "typescript": "5.9.3",
-    "vite": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "react-router-dom": "^7.18.2",
+    "typescript": "5.9.3",
+    "vite": "latest"
   },
   "devDependencies": {
     "@types/react": "latest",

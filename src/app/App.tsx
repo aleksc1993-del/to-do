@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { calculateMonthlyStatistics, calculateTrend, mockCategories, mockOperations, type CategoryId, type Money, type Operation } from "../entities/finance";
 import { createLocalStorageAdapter } from "../shared";
+import { OperationList } from "../widgets/operation-list";
 import "./statistics.css";
 
 const storage = createLocalStorageAdapter<Operation[]>({ key: "expense-calculator.operations", isValue: (value): value is Operation[] => Array.isArray(value) });
@@ -8,7 +10,7 @@ const moneyFormatter = new Intl.NumberFormat("ru-RU", { style: "currency", curre
 const monthFormatter = new Intl.DateTimeFormat("ru-RU", { month: "long", year: "numeric" });
 const formatMoney = (amount: number) => moneyFormatter.format(amount / 100);
 
-export function App() {
+function StatisticsPage() {
   const [operations, setOperations] = useState<Operation[]>(() => storage.load() ?? [...mockOperations]);
   const [month, setMonth] = useState("2026-08");
   const [trendMode, setTrendMode] = useState<"day" | "month">("day");
@@ -33,9 +35,8 @@ export function App() {
     <aside className="sidebar">
       <div className="brand"><span className="brand-mark">₽</span><strong>Финансы</strong></div>
       <nav className="nav" aria-label="Основная навигация">
-        <button className="nav-item" type="button"><span>⌂</span>Обзор</button>
-        <button className="nav-item active" type="button" aria-current="page"><span>◒</span>Статистика</button>
-        <button className="nav-item" type="button"><span>↕</span>Операции</button>
+        <Link className="nav-item active" aria-current="page" to="/statistics"><span>◒</span>Статистика</Link>
+        <Link className="nav-item" to="/operations"><span>↕</span>Операции</Link>
       </nav>
       <button className="add-button" type="button" onClick={() => document.querySelector<HTMLInputElement>('input[name="amount"]')?.focus()}>＋ Добавить операцию</button>
       <div className="profile"><span className="avatar">АИ</span><div><strong>Алексей Иванов</strong><small>Личный аккаунт</small></div><span>•••</span></div>
@@ -53,4 +54,32 @@ export function App() {
       <article className="card quick-add"><h2>Добавить расход</h2><form onSubmit={addExpense}><input name="amount" type="number" min="0.01" step="0.01" placeholder="Сумма в ₽" required /><button type="submit">Добавить</button></form></article>
     </section>
   </main>;
+}
+
+function OperationsPage() {
+  const [operations, setOperations] = useState<Operation[]>(() => storage.load() ?? [...mockOperations]);
+  useEffect(() => { storage.save(operations); }, [operations]);
+
+  return <main className="workspace operations-workspace">
+    <aside className="sidebar">
+      <div className="brand"><span className="brand-mark">₽</span><strong>Финансы</strong></div>
+      <nav className="nav" aria-label="Основная навигация">
+        <Link className="nav-item" to="/statistics"><span>◒</span>Статистика</Link>
+        <Link className="nav-item active" aria-current="page" to="/operations"><span>↕</span>Операции</Link>
+      </nav>
+    </aside>
+    <section className="dashboard">
+      <header className="page-header"><div><p className="muted">История финансов</p><h1>Операции</h1></div></header>
+      <OperationList operations={operations} categories={mockCategories} onDelete={(id) => setOperations((current) => current.filter((operation) => operation.id !== id))} />
+    </section>
+  </main>;
+}
+
+export function App() {
+  return <Routes>
+    <Route path="/" element={<Navigate to="/statistics" replace />} />
+    <Route path="/statistics" element={<StatisticsPage />} />
+    <Route path="/operations" element={<OperationsPage />} />
+    <Route path="*" element={<Navigate to="/statistics" replace />} />
+  </Routes>;
 }
