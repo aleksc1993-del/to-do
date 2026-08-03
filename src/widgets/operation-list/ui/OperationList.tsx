@@ -1,4 +1,5 @@
-import type { Category, Operation } from "../../../entities/finance";
+import { useMemo, useState } from "react";
+import { emptyOperationFilters, filterOperations, type Category, type CategoryId, type Money, type Operation, type OperationFilters, type OperationType } from "../../../entities/finance";
 
 interface OperationListProps {
   readonly operations: readonly Operation[];
@@ -24,7 +25,14 @@ function formatAmount(amount: Operation["amount"], type: Operation["type"]): str
 }
 
 export function OperationList({ operations, categories, onDelete }: OperationListProps) {
+  const [filters, setFilters] = useState<OperationFilters>(emptyOperationFilters);
   const categoryById = new Map(categories.map((category) => [category.id, category]));
+  const filteredOperations = useMemo(() => filterOperations(operations, filters), [operations, filters]);
+  const updateFilter = <Field extends keyof OperationFilters>(field: Field, value: OperationFilters[Field]) => setFilters((current) => ({ ...current, [field]: value }));
+  const parseAmount = (value: string): Money | null => {
+    const amount = Number(value.replace(",", "."));
+    return value.trim() && Number.isFinite(amount) && amount >= 0 ? Math.round(amount * 100) as Money : null;
+  };
 
   return (
     <section className="operation-list-card" aria-labelledby="operation-list-title">
@@ -33,14 +41,23 @@ export function OperationList({ operations, categories, onDelete }: OperationLis
           <p className="eyebrow">История</p>
           <h2 id="operation-list-title">Список операций</h2>
         </div>
-        <span className="operation-count">{operations.length}</span>
+        <span className="operation-count">{filteredOperations.length}</span>
       </div>
 
-      {operations.length === 0 ? (
+      <div className="filters" aria-label="Фильтры операций">
+        <label className="filter-field"><span>Месяц</span><input type="month" value={filters.month} onChange={(event) => updateFilter("month", event.target.value)} /></label>
+        <label className="filter-field"><span>Тип</span><select value={filters.type} onChange={(event) => updateFilter("type", event.target.value as OperationType | "all")}><option value="all">Все типы</option><option value="income">Доход</option><option value="expense">Расход</option></select></label>
+        <label className="filter-field"><span>Категория</span><select value={filters.category} onChange={(event) => updateFilter("category", event.target.value === "all" ? "all" : event.target.value as CategoryId)}><option value="all">Все категории</option>{categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select></label>
+        <label className="filter-field"><span>Сумма от</span><input inputMode="decimal" placeholder="0,00" onChange={(event) => updateFilter("minAmount", parseAmount(event.target.value))} /></label>
+        <label className="filter-field"><span>Сумма до</span><input inputMode="decimal" placeholder="0,00" onChange={(event) => updateFilter("maxAmount", parseAmount(event.target.value))} /></label>
+        <button className="clear-filters" type="button" onClick={() => setFilters(emptyOperationFilters)}>Сбросить</button>
+      </div>
+
+      {filteredOperations.length === 0 ? (
         <p className="empty-list">Операций пока нет. Добавьте первую запись выше.</p>
       ) : (
         <ul className="operation-items">
-          {operations.map((operation) => {
+          {filteredOperations.map((operation) => {
             const category = categoryById.get(operation.category);
             return (
               <li className="operation-item" key={operation.id}>
