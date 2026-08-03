@@ -1,12 +1,31 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { calculateMonthlyStatistics, mockCategories, mockOperations, type CategoryId, type Money, type Operation } from "../entities/finance";
+import { createLocalStorageAdapter } from "../shared";
+
+const operationsStorage = createLocalStorageAdapter<Operation[]>({
+  key: "expense-calculator.operations",
+  isValue: (value): value is Operation[] => Array.isArray(value) && value.every(isOperation),
+});
+
+function isOperation(value: unknown): value is Operation {
+  if (typeof value !== "object" || value === null) return false;
+  const operation = value as Record<string, unknown>;
+  return typeof operation.id === "string" &&
+    (operation.type === "income" || operation.type === "expense") &&
+    typeof operation.amount === "number" && Number.isSafeInteger(operation.amount) && operation.amount >= 0 &&
+    typeof operation.category === "string" && typeof operation.date === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(operation.date) && typeof operation.comment === "string";
+}
 
 const formatter = new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", maximumFractionDigits: 0 });
 const formatMoney = (value: number) => formatter.format(value / 100);
 
 export function App() {
-  const [operations, setOperations] = useState<Operation[]>([...mockOperations]);
+  const [operations, setOperations] = useState<Operation[]>(() => operationsStorage.load() ?? [...mockOperations]);
   const [selectedMonth, setSelectedMonth] = useState("2026-08");
+  useEffect(() => {
+    operationsStorage.save(operations);
+  }, [operations]);
   const statistics = useMemo(() => calculateMonthlyStatistics(operations, selectedMonth), [operations, selectedMonth]);
   const categories = useMemo(() => new Map(mockCategories.map((category) => [category.id, category])), []);
 
