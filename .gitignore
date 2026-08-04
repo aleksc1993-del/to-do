@@ -5,3 +5,9 @@ dist/
 .env
 .env.*
 !.env.example
+# Vite
+vite.log
+vite-error.log
+
+# Логи
+*.log
